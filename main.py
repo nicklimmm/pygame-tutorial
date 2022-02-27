@@ -1,8 +1,7 @@
-from lib2to3 import pygram
-from tkinter import RIGHT
 import pygame
 from pygame.locals import *
 import sys
+from collections import deque
 
 # Initialize pygame
 pygame.init()
@@ -31,19 +30,28 @@ pygame.display.set_caption("Snake")
 # Clock to set framerate
 clock = pygame.time.Clock()
 
+BLOCK_LENGTH = 25
 
 # Direction constants (x, y)
-UP_DIR = (0, -5)
-DOWN_DIR = (0, 5)
-RIGHT_DIR = (5, 0)
-LEFT_DIR = (-5, 0)
+UP_DIR = (0, -BLOCK_LENGTH)
+DOWN_DIR = (0, BLOCK_LENGTH)
+RIGHT_DIR = (BLOCK_LENGTH, 0)
+LEFT_DIR = (-BLOCK_LENGTH, 0)
 
+INITIAL_SNAKE_BODY_LENGTH = 25
+
+apple = pygame.image.load("./apple.png").convert_alpha()
+apple = pygame.transform.scale(apple, (BLOCK_LENGTH, BLOCK_LENGTH))
 class Snake(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.rect = pygame.rect.Rect((0, 0, 25, 25))
         self.dir = RIGHT_DIR
-        # self.length = 
+
+        # left-most item -> tail, right-most item -> head
+        self.body = deque([
+            pygame.rect.Rect((i * BLOCK_LENGTH, 0, BLOCK_LENGTH, BLOCK_LENGTH)) for i in range(INITIAL_SNAKE_BODY_LENGTH)
+        ])
+
 
     def update(self):
         pressed_keys = pygame.key.get_pressed()
@@ -58,31 +66,41 @@ class Snake(pygame.sprite.Sprite):
         if pressed_keys[K_RIGHT] and self.dir != LEFT_DIR:
             self.dir = RIGHT_DIR
 
-        self.rect.move_ip(self.dir)
+        # Remove tail
+        self.body.popleft()
+
+        # Get the new position of head
+        new_head = self.body[-1].copy()
+        new_head.move_ip(self.dir)
 
         # Reset conditions
         # Too far up
-        if self.rect.y < 0:
-            self.rect.y = WINDOW_HEIGHT
+        if new_head.y < 0:
+            new_head.y = WINDOW_HEIGHT
         
         # Too far down
-        if self.rect.y > WINDOW_HEIGHT:
-            self.rect.y = 0
+        if new_head.y > WINDOW_HEIGHT:
+            new_head.y = 0
 
         # Too far right
-        if self.rect.x > WINDOW_WIDTH:
-            self.rect.x = 0
+        if new_head.x > WINDOW_WIDTH:
+            new_head.x = 0
         
         # Too far left
-        if self.rect.x < 0:
-            self.rect.x = WINDOW_WIDTH
+        if new_head.x < 0:
+            new_head.x = WINDOW_WIDTH
+        
+        # Add head
+        self.body.append(new_head)
 
     def draw(self):
         # Reset the window
         WINDOW.fill('Black')
+        WINDOW.blit(apple, (0, 0))
 
-        # Draw rectangle
-        pygame.draw.rect(WINDOW, 'White', self.rect)
+        # Draw body
+        for block in self.body:
+            pygame.draw.rect(WINDOW, 'White', block)
 
 snake = Snake()
 
@@ -98,7 +116,7 @@ while True:
     snake.draw()
 
     # Set framerate
-    clock.tick(60)
+    clock.tick(20)
 
     # Update display
     pygame.display.update()
