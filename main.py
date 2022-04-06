@@ -2,6 +2,7 @@ import pygame
 from pygame.locals import *
 import sys
 from collections import deque
+from itertools import islice
 
 # Initialize pygame
 pygame.init()
@@ -42,6 +43,14 @@ INITIAL_SNAKE_BODY_LENGTH = 25
 
 apple = pygame.image.load("./apple.png").convert_alpha()
 apple = pygame.transform.scale(apple, (BLOCK_LENGTH, BLOCK_LENGTH))
+
+game_over = False
+
+def display_game_over():
+    myfont = pygame.font.SysFont("monospace", 32)
+    label = myfont.render("Game Over", 1, (255,0,0))
+    WINDOW.blit(label, (300, 300))
+
 class Snake(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
@@ -90,6 +99,12 @@ class Snake(pygame.sprite.Sprite):
         if new_head.x < 0:
             new_head.x = WINDOW_WIDTH
         
+        # Check if head collides with body -> game over
+        for sq in deque(islice(self.body, len(self.body) - 1)):
+            if new_head.colliderect(sq):
+                global game_over
+                game_over = True
+
         # Add head
         self.body.append(new_head)
 
@@ -106,17 +121,19 @@ snake = Snake()
 
 # Game Loop
 while True:
-    # Looking all events that is happening
     for event in pygame.event.get():
         if event.type == QUIT:
             pygame.quit()
             sys.exit()
 
-    snake.update()
-    snake.draw()
+    if game_over:
+        display_game_over()
+    else:
+        snake.update()
+        snake.draw()
 
-    # Set framerate
-    clock.tick(20)
+        # Set framerate
+        clock.tick(15)
 
     # Update display
     pygame.display.update()
